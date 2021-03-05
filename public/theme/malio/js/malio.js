@@ -1,3 +1,9 @@
+/*
+edit by @realfever
+date: 03/05/2021
+changed:
+1. add membership upgrade package function
+*/
 const csKdOsOtLF = {
     'includes' : function(){
         return true;
@@ -1744,6 +1750,33 @@ function buyTrafficPackage() {
         'url': 'shop/buytrafficpackage',
         'dataType': 'json',
         'data': {'shopid': $('input[name=traffic-package-radio]:checked').val()},
+        'success': function (_0x561d1d) {
+            if (_0x561d1d.ret) {
+                swal({
+                    'type': 'success',
+                    'title': '请求成功',
+                    'text': _0x561d1d.msg
+                });
+            } else {
+                Swal.fire('发生错误', _0x561d1d.msg, 'error');
+            }
+        }
+    });
+}
+//会员升级包
+function buyMembershipPackage() {
+    var con = confirm("购买此项将会获得一年的VIP节点使用资格，不会与现有套餐冲突，多次购买时长可以叠加！点击确定表示知晓并继续");
+    if(!con){
+        return 0;
+    }
+    if (!csKdOsOtLF.includes(location.host)) {
+        return false;
+    }
+    ;$.ajax({
+        'type': 'POST',
+        'url': 'shop/buymembershippackage',
+        'dataType': 'json',
+        'data': {'shop': $('input[name=membership-package-radio]:checked').val(),"autorenew":0,"disableothers":0},
         'success': function (_0x561d1d) {
             if (_0x561d1d.ret) {
                 swal({

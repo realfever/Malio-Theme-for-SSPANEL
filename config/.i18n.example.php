@@ -1,5 +1,10 @@
 <?php
-
+/*
+edit by @realfever
+date: 03/05/2021
+changed:
+1. add membership upgrade package strings
+*/
 ## Admin Settings 站长设置 ##
 $I18N['appName'] = array(
     'en' => 'Malio',
@@ -1028,6 +1033,11 @@ $I18N['purchase'] = array(
 $I18N['data-add-on-item'] = array(
     'en' => '$1 CNY - $2GB Data Add-on',
     'zh-cn' => '$1 元 $2GB 流量叠加包'
+);
+#会员升级包
+$I18N['membership-add-on-item'] = array(
+    'en' => '$1 CNY - $2GB Data Add-on',
+    'zh-cn' => '$1 元 VIP升级包（一年）'
 );
 $I18N['store-title'] = array(
     'en' => 'Choose Your Subscription Plan',

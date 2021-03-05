@@ -2,6 +2,13 @@
 
 namespace App\Controllers;
 
+/*
+edit by @realfever
+date: 03/05/2021
+changed:
+1. added membership upgrade package function
+2. added notification after purchase
+*/
 use App\Services\Auth;
 use App\Models\Node;
 use App\Models\TrafficLog;
@@ -1217,9 +1224,22 @@ class UserController extends BaseController
         $bought->coupon = $code;
         $bought->price = $price;
         $bought->save();
-
         $shop->buy($user);
-
+        Telegram::Send('感谢 '.$user->user_name . ' 大老爷选择了我们的服务！');
+        //邮件通知
+        $subject = Config::get('appName') . '-您的订单已被确认';
+        $to = $user->email;
+        $text = "您好：<br/>根据您所订购的订单 ID:" . $bought->id . '，您的流量已经更新为' . $shop->reset_value() . "GB<br/>感谢您的信任，为了方便通知请务必加入我们的Telegram群组：<br/><a href='https://t.me/joinchat/RgU_Jt5yK2NKhkJf'>Linkhub官方群组</a>";
+        try {
+            Mail::send($to, $subject, 'news/confirm.tpl', [
+                'user' => $user,
+                'text' => $text
+            ], [
+            ]);
+        } catch (Exception $e) {
+            echo $e->getMessage();
+        }
+        //
         $res['ret'] = 1;
         $res['msg'] = '购买成功';
 
@@ -2105,6 +2125,119 @@ class UserController extends BaseController
         $bought->price = $price;
         $bought->save();
 
+        $res['ret'] = 1;
+        $res['msg'] = '购买成功';
+
+        return $response->getBody()->write(json_encode($res));
+    }
+
+    public function buyMembershipPackage($request, $response, $args)
+    {
+        $coupon = $request->getParam('coupon');
+        $coupon = trim($coupon);
+        $code = $coupon;
+        $shop = $request->getParam('shop');
+        $disableothers = $request->getParam('disableothers');
+        $autorenew = $request->getParam('autorenew');
+
+        if (MalioConfig::get('shop_enable_trail_plan') == true && MalioConfig::get('shop_trail_plan_shopid') == $shop && $this->user->class >= 0) {
+            return 0;
+        };
+
+        $shop = Shop::where('id', $shop)->where('status', 1)->first();
+
+        if ($shop == null) {
+            $res['ret'] = 0;
+            $res['msg'] = '非法请求';
+            return $response->getBody()->write(json_encode($res));
+        }
+
+        if ($coupon == '') {
+            $credit = 0;
+        } else {
+            $coupon = Coupon::where('code', $coupon)->first();
+
+            if ($coupon == null) {
+                $credit = 0;
+            } else {
+                if ($coupon->onetime == 1) {
+                    $onetime = true;
+                }
+
+                $credit = $coupon->credit;
+            }
+
+            if ($coupon->order($shop->id) == false) {
+                $res['ret'] = 0;
+                $res['msg'] = '此优惠码不可用于此商品';
+                return $response->getBody()->write(json_encode($res));
+            }
+
+            if ($coupon->expire < time()) {
+                $res['ret'] = 0;
+                $res['msg'] = '此优惠码已过期';
+                return $response->getBody()->write(json_encode($res));
+            }
+        }
+
+        $price = $shop->price * ((100 - $credit) / 100);
+        $user = $this->user;
+        $traffic = $user->transfer_enable;
+        if (!$user->isLogin) {
+            $res['ret'] = -1;
+            return $response->getBody()->write(json_encode($res));
+        }
+        
+        if (bccomp($user->money, $price, 2) == -1) {
+            $res['ret'] = 0;
+            $res['msg'] = '喵喵喵~ 当前余额不足，总价为' . $price . '元。</br><a href="/user/code">点击进入充值界面</a>';
+            return $response->getBody()->write(json_encode($res));
+        }
+
+        $user->money = bcsub($user->money, $price, 2);
+        if ($disableothers == 1) {
+            $boughts = Bought::where('userid', $user->id)->get();
+            foreach ($boughts as $disable_bought) {
+                $disable_bought->renew = 0;
+                $disable_bought->save();
+            }
+        }
+
+        $bought = new Bought();
+        $bought->userid = $user->id;
+        $bought->shopid = $shop->id;
+        $bought->datetime = time();
+        if ($autorenew == 0 || $shop->auto_renew == 0) {
+            $bought->renew = 0;
+        } else {
+            $bought->renew = time() + $shop->auto_renew * 86400;
+        }
+        if (isset($onetime)) {
+            $bought->renew = 0;
+        }
+        $bought->coupon = $code;
+        $bought->price = $price;
+        $bought->save();
+        $user->transfer_enable = $traffic;
+        $user->save();
+        $shop->memberShip($user);
+        if($shop->id == 1000){
+            Telegram::Send("恭喜 ".$user->user_name." 大老爷成为了尊贵的人上人");
+        }
+        //邮件通知
+        $subject = Config::get('appName') . '-您的订单已被确认';
+        $to = $user->email;
+        $text = "您好：<br/>根据您所订购的订单 ID:" . $bought->id . "，您已成为VIP用户，有效期为一年<br/>感谢您的信任，为了方便通知请务必加入我们的Telegram群组：<br/><a href='https://t.me/joinchat/RgU_Jt5yK2NKhkJf'>Linkhub官方群组</a>";
+        try {
+            Mail::send($to, $subject, 'news/confirm.tpl', [
+                'user' => $user,
+                'text' => $text
+            ], [
+            ]);
+        } catch (Exception $e) {
+            echo $e->getMessage();
+        }
+        //
         $res['ret'] = 1;
         $res['msg'] = '购买成功';
 

@@ -1,6 +1,11 @@
 <!DOCTYPE html>
 <html lang="en">
-
+<!--
+edit by @realfever
+date: 03/05/2021
+changed:
+1. add membership upgrade package on right corner
+-->
 <head>
   {include file='user/head.tpl'}
 
@@ -169,6 +174,12 @@
               </div>
             </div>
             {/if}
+            <div class="section-header-breadcrumb">
+              <div class="breadcrumb-item active">
+                <a href="#" class="btn btn-icon icon-left btn-warning" data-toggle="modal" data-target="#membership-package-modal"><i class="fas fa-crown"></i> 购买VIP</a>
+              </div>
+            </div>
+            <!--会员升级-->
           </div>
           <div class="section-body">
             <h2 class="section-title">{$i18n->get('store-title')}</h2>
@@ -722,6 +733,34 @@
   </div>
 </div>
 {/if}
+
+<!--会员升级模态框-->
+<div class="modal fade" tabindex="-1" role="dialog" id="membership-package-modal">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">升级会员</h5>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          {foreach $malio_config['shop_membership_packages'] as $mpackage}
+          <div class="custom-control custom-radio">
+            <input type="radio" value="{$mpackage['shopid']}" id="tp-{$mpackage['shopid']}" name="membership-package-radio" class="custom-control-input">
+            <label class="custom-control-label" for="tp-{$mpackage['shopid']}">
+              {$i18n->get('membership-add-on-item',[$mpackage['price'],$mpackage['traffic']])}
+              </label>
+          </div>
+          {/foreach}
+        </div>
+      </div>
+      <div class="modal-footer bg-whitesmoke br">
+        <button onclick="buyMembershipPackage()" type="button" data-dismiss="modal" class="btn btn-primary">{$i18n->get('purchase')}</button>
+        <button type="button" class="btn btn-secondary" data-dismiss="modal">{$i18n->get('cancel')}</button>
+      </div>
+    </div>
+  </div>
+</div>
+<!--会员升级-->
 
 {if $malio_config['shop_enable_traffic_package'] == true && $user->class > 0}
 <div class="modal fade" tabindex="-1" role="dialog" id="traffic-package-modal">

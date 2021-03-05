@@ -2,6 +2,16 @@
     
     namespace App\Utils;
     
+    /*
+    edit by: @realfever
+    date: 03/05/2021
+    changed: 
+    1. fixed can't run verify user's session
+    2. added feature: auto-reply 
+    3. deleted useless code, Telegram/Message.php (reason: not used) and merged it functions into this
+    4. made menu easy to read
+    */
+    use App\Utils\Telegram;
     use App\Models\User;
     use App\Services\Config;
     use App\Controllers\LinkController;
@@ -13,17 +23,18 @@
     class TelegramProcess
     {
         private static $all_rss = [
+            //请根据需求开启
             'clean_link' => '重置订阅',
-            '?sub=1' => 'SSR订阅',
-            '?sub=3' => 'V2ray订阅',
+            //'?sub=1' => 'SSR订阅',
+            //'?sub=3' => 'V2ray订阅',
             '?sub=5' => 'Shadowrocket',
             '?sub=4' => 'Kitsunebi or V2rayNG or BifrostV',
-            '?surge=2' => 'Surge 2.x',
-            '?surge=3' => 'Surge 3.x',
-            '?ssd=1' => 'SSD',
+            //'?surge=2' => 'Surge 2.x',
+            //'?surge=3' => 'Surge 3.x',
+            //'?ssd=1' => 'SSD',
             '?clash=1' => 'Clash',
-            '?surfboard=1' => 'Surfboard',
-            '?quantumult=3' => 'Quantumult(完整配置)'
+            //'?surfboard=1' => 'Surfboard',
+            //'?quantumult=3' => 'Quantumult(完整配置)'
         ];
     
         private static function callback_bind_method($bot, $callback)
@@ -69,7 +80,7 @@
                 $bot->sendMessage($message->getChat()->getId(), $reply_message, $parseMode = null, $disablePreview = false, $replyToMessageId = $reply_to);
             }
         }
-    
+        
         private static function needbind_method($bot, $message, $command, $user, $reply_to = null)
         {
             $reply = [
@@ -86,14 +97,14 @@
                         break;
                     case 'checkin':
                         if (!$user->isAbleToCheckin()) {
-                            $reply['message'] = '您今天已经签过到了！';
+                            $reply['message'] = '大老爷，这种事一天只可以做一次的啊';
                             break;
                         }
                         $traffic = random_int(Config::get('checkinMin'), Config::get('checkinMax'));
                         $user->transfer_enable += Tools::toMB($traffic);
                         $user->last_check_in_time = time();
                         $user->save();
-                        $reply['message'] = '签到成功！获得了 ' . $traffic . ' MB 流量！';
+                        $reply['message'] = '这么快就完事了？获得了 ' . $traffic . ' MB 奇怪液体！';
                         break;
                     case 'prpr':
                         $prpr = array('⁄(⁄ ⁄•⁄ω⁄•⁄ ⁄)⁄', '(≧ ﹏ ≦)', '(*/ω＼*)', 'ヽ(*。>Д<)o゜', '(つ ﹏ ⊂)', '( >  < )');
@@ -123,42 +134,93 @@
             $user = User::where('telegram_id', $message->getFrom()->getId())->first();
             $reply_to = $message->getMessageId();
             $reply = [
-                'message' => '？？？',
+                'message' => '不够涩= =',
                 'markup' => null,
             ];
-            if ($message->getChat()->getId() > 0) {
-                //个人
+            if ($message->getChat()->getId()) {
+                //消息回复，默认/rss功能不在群组内启用
                 $bot->sendChatAction($message->getChat()->getId(), 'typing');
     
                 switch ($command) {
                     case 'ping':
+                        $MessageData = $message->getText();
+                        $f = fopen("/www/wwwroot/trojan_ssp/tg_log/log.txt","w");
+                        fwrite($f,$MessageData);
+                        fclose($f);
                         $reply['message'] = 'Pong!您的 ID 是 ' . $message->getChat()->getId() . '!';
+                        if($message->getChat()->getId() == Config::get('telegram_chatid')){
+                                //$reply['message'] = 'pong';
+                                //如果不想显示群组ID请取消上面的注释
+                            }
                         break;
                     case 'traffic':
-                    case 'checkin':
-                    case 'prpr':
-                    case 'rss':
                         $reply = self::needbind_method($bot, $message, $command, $user, $reply_to);
+                        
+                        break;
+                    case 'checkin':
+                        $reply = self::needbind_method($bot, $message, $command, $user, $reply_to);
+                        
+                        break;
+                    case 'prpr':
+                        $reply = self::needbind_method($bot, $message, $command, $user, $reply_to);
+                        
+                        break;
+                    case 'rss':
+                        if($message->getChat()->getId() == Config::get('telegram_chatid')){
+                            $reply['message'] = '住手，这里不可以干那种事啊~';
+                            break;
+                        }
+                        $reply = self::needbind_method($bot, $message, $command, $user, $reply_to);
+                        
                         break;
                     case 'help':
-                        $reply['message'] = '命令列表：
-                            /ping  获取群组ID
-                            /traffic 查询流量
-                            /checkin 签到
-                            /help 获取帮助信息
-                            /rss 获取节点订阅';
+                        $reply['message'] = 
+                        "指令列表：\n/prpr 舔\n/ping  获取群组ID\n/traffic 查询流量\n/checkin 签到\n/help 获取帮助信息\n/rss 获取节点订阅\n\n自动回复（无需加/）：\n官网 官网地址\nApple ID 小火箭免费下载账号";
                         if ($user == null) {
                             $reply['message'] .= PHP_EOL . '您未绑定本站账号，您可以进入网站的“资料编辑”，在右下方绑定您的账号';
                         }
                         break;
                     default:
                         if ($message->getPhoto() == null) {
-                            if (!is_numeric($message->getText()) || strlen($message->getText()) != 6) {
-                                $reply['message'] = Tuling::chat($message->getFrom()->getId(), $message->getText());
+                            $MessageData = $message->getText();
+                            if(strstr($MessageData,"apple") && strstr($MessageData,"id")){
+                                $reply['message'] = "免费下载Shadowrocket！\n\nApple ID\n账号：xxx\n密码：xxx\n\n不要在iCloud登陆！！！！\n不要在iCloud登陆！！！！\n不要在iCloud登陆！！！！\n\nIOS 14的用户 在安全项选择不升级";
                                 break;
                             }
+                            if(strstr($MessageData,"Apple") && strstr($MessageData,"ID")){
+                                $reply['message'] = "免费下载Shadowrocket！\n\nApple ID\n账号：xxx\n密码：xxx\n\n不要在iCloud登陆！！！！\n不要在iCloud登陆！！！！\n不要在iCloud登陆！！！！\n\nIOS 14的用户 在安全项选择不升级";
+                                break;
+                            }
+                            if(strstr($MessageData,"官网")){
+                                $reply['message'] = "回家地址".Config::get('baseUrl')."\n";
+                                break;
+                            }
+                            if(strstr($MessageData,"跑路")){
+                                $reply['message'] = "跑路？再说本智障姬要生气了！";
+                                break;
+                            }
+                            if(strstr($MessageData,"套餐") && strstr($MessageData,"叠加")){
+                                $reply['message'] = "温馨提示，所有套餐均不可叠加";
+                                break;
+                            }
+                            if(strstr($MessageData,"表白智障姬")){
+                                $reply['message'] = "mua~智障姬也爱你！";
+                                break;
+                            }
+                            if(strstr($MessageData,"快吗") || strstr($MessageData,"速度")){
+                                $reply['message'] = "不快本智障卖你干啥";
+                                break;
+                            }
+                            if(strlen($message->getText()) != 16){
+                                if ((!(is_numeric($message->getText()) && strlen($message->getText()) == 6 ))) {
+                                    $reply['message'] = Tuling::chat($message->getFrom()->getId(), $message->getText());
+                                    break;
+                                }
+                            }
+                            
     
                             if ($user != null) {
+                                
                                 $uid = TelegramSessionManager::verify_login_number($message->getText(), $user->id);
                                 if ($uid != 0) {
                                     $reply['message'] = '登录验证成功，邮箱：' . $user->email;
@@ -167,13 +229,24 @@
                                 }
                                 break;
                             }
-    
-                            $reply['message'] = '登录验证失败，您未绑定本站账号';
+                            if(strlen($message->getText()) == 16){
+                                    $MessageData = $message->getText();
+                                    $Uid = TelegramSessionManager::verify_bind_session($MessageData);
+                                    $reply['message'] = "绑定失败，请刷新绑定码！";
+                                    if($Uid != 0){
+                                        $elink  = User::where('id',$Uid)->first();
+                                        $elink->telegram_id = $message->getFrom()->getId();
+                                        $elink->save();
+                                        $reply['message'] = "绑定成功";
+                                    }
+                            }
+                            else{
+                                $reply['message'] = '登录验证失败，您未绑定本站账号';
+                            }
+                            //$reply['message'] = strlen($message->getText());
+                            
                             break;
                         }
-    
-                        $bot->sendMessage($message->getChat()->getId(), '正在解码，请稍候。。。');
-                        $bot->sendChatAction($message->getChat()->getId(), 'typing');
                         $photos = $message->getPhoto();
     
                         $photo_size_array = array();
@@ -248,57 +321,9 @@
                         }
                 }
             } else {
-                //群组
-                if (Config::get('telegram_group_quiet') == 'true') {
-                    return;
-                }
-                $bot->sendChatAction($message->getChat()->getId(), 'typing');
-    
-                switch ($command) {
-                    case 'ping':
-                        $reply['message'] = 'Pong!这个群组的 ID 是 ' . $message->getChat()->getId() . '!';
-                        break;
-                    case 'traffic':
-                    case 'checkin':
-                    case 'prpr':
-                        $reply = self::needbind_method($bot, $message, $command, $user, $reply_to);
-                        break;
-                    case 'rss':
-                        $reply['message'] = '请私聊机器人使用该命令';
-                        break;
-                    case 'help':
-                        $reply['message'] = '命令列表：
-                            /ping  获取群组ID
-                            /traffic 查询流量
-                            /checkin 签到
-                            /help 获取帮助信息
-                            /rss 获取节点订阅	';
-                        if ($user == null) {
-                            $reply['message'] .= PHP_EOL . '您未绑定本站账号，您可以进入网站的“资料编辑”，在右下方绑定您的账号';
-                        }
-                        break;
-                    default:
-                        if ($message->getText() != null) {
-                            if ($message->getChat()->getId() == Config::get('telegram_chatid')) {
-                                $reply['message'] = Tuling::chat($message->getFrom()->getId(), $message->getText());
-                            } else {
-                                $reply['message'] = '不约，叔叔我们不约';
-                            }
-                        }
-                        if ($message->getNewChatMember() != null && Config::get('enable_welcome_message') == 'true') {
-                            $reply['message'] = '欢迎 ' . $message->getNewChatMember()->getFirstName() . ' ' . $message->getNewChatMember()->getLastName();
-                        } else {
-                            $reply['message'] = null;
-                        }
-
-                        if ($user == null && $message->getNewChatMember() != null && MalioConfig::get('force_user_to_bind_tg_when_join_group') == true) {
-                            $remove_message = $bot->sendMessage($message->getChat()->getId(), '您未绑定本站账号，无法加入此群组。您可以进入网站的 “我的账号” 页面绑定您的账号。', $parseMode = null, $disablePreview = false, $replyToMessageId = $reply_to, $replyMarkup = $reply['mark']);
-                            $bot->kickChatMember($message->getChat()->getId(), $message->getFrom()->getId(), time()+60);
-                            $bot->deleteMessage($message->getChat()->getId(), $remove_message->getMessageId());
-                        }
-                }
+                //不需要群组分支，如果不在群组里启用消息，在上面将条件改为和/rss命令一样就行
             }
-    
+            
             $bot->sendMessage($message->getChat()->getId(), $reply['message'], $parseMode = null, $disablePreview = false, $replyToMessageId = $reply_to, $replyMarkup = $reply['markup']);
             $bot->sendChatAction($message->getChat()->getId(), '');
         }
