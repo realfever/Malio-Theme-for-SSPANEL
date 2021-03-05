@@ -1,5 +1,11 @@
 <?php
-
+/*
+edit by @realfever
+date: 03/05/2021
+changed:
+1. added membership upgrade package route
+2. added problem user detect
+*/
 use Slim\Container;
 use App\Middleware\Auth;
 use App\Middleware\Guest;
@@ -91,6 +97,8 @@ $app->group('/user', function () {
     $this->get('/shop', App\Controllers\UserController::class . ':shop');
     $this->post('/coupon_check', App\Controllers\UserController::class . ':CouponCheck');
     $this->post('/buy', App\Controllers\UserController::class . ':buy');
+    //问题用户
+    $this->get('/getproblemuser', App\Controllers\UserController::class . ':getProblemUser');
 
     // Relay Mange
     $this->get('/relay', App\Controllers\RelayController::class . ':index');
@@ -163,6 +171,9 @@ $app->group('/user', function () {
     $this->get('/shop/getplaninfo', App\Controllers\UserController::class . ':getPlanInfo');
     $this->get('/shop/getplantime', App\Controllers\UserController::class . ':getPlanTime');
     $this->post('/shop/buytrafficpackage', App\Controllers\UserController::class . ':buyTrafficPackage');
+    //会员升级
+    $this->post('/shop/buymembershippackage', App\Controllers\UserController::class . ':buyMembershipPackage');
+    //
     $this->get('/share-account', App\Controllers\UserController::class . ':share_account');
     $this->post('/api/change-lang', App\Controllers\UserController::class . ':changeLang');
     $this->get('/qrcode', App\Controllers\UserController::class . ':qrcode');
@@ -230,6 +241,7 @@ $app->group('/admin', function () {
     $this->get('/ticket', App\Controllers\Admin\TicketController::class . ':index');
     $this->get('/ticket/{id}/view', App\Controllers\Admin\TicketController::class . ':show');
     $this->put('/ticket/{id}', App\Controllers\Admin\TicketController::class . ':update');
+    $this->post('/ticket/post/{id}', App\Controllers\Admin\TicketController::class . ':update');
     $this->post('/ticket/ajax', App\Controllers\Admin\TicketController::class . ':ajax');
 
     // Relay Mange

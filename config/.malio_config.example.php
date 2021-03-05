@@ -12,7 +12,12 @@ __    __     ______     __         __     ______
 
 */
 
-
+/*
+edit by @realfever
+date: 03/05/2021
+changed:
+1. add membership upgrade package
+*/
 ####### 版本信息说明（请勿更改） #######
 $Malio_Config['config_migrate_notice'] = '';
 $Malio_Config['version'] = '1';
@@ -215,6 +220,15 @@ $Malio_Config['shop_traffic_packages'] = [ // 商店流量叠加包的详细信�
         'shopid' => 15,
         'traffic' => 30,
         'price' => 15 
+    ),
+];
+
+####### 升级会员包 #######
+$Malio_Config['shop_membership_packages'] = [ // 商店会员升级包的详细信息
+    array(
+        'shopid' => 1000, // 会员叠加包的商品ID
+        'traffic' => 0, // 单位为GB
+        'price' => 5 
     ),
 ];
 
